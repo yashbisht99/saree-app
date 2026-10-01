@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  sku          String?  @unique
+  name         String
+  category     String
+  subcategory  String?
+  fabric       String?
+  color        String?  // legacy single color
+  colors       String?  // JSON array ["Red","Blue"] for multiple colors
+  pattern      String?
+  size         String?
+  hsn          String?
+  variants     String?  // JSON array of variants [{color, size, stockQty, sku}]
+  costPrice    Float
+  sellingPrice Float
+  stockQty     Int      @default(0)
+  minStock     Int      @default(5)
+  location     String?
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id])
+  images       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  saleItems    SaleItem[]
+}
+
+model Sale {
+  id          String     @id @default(cuid())
+  billNo      String     @unique
+  customerId  String?
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  items       SaleItem[]
+  subtotal    Float
+  discount    Float      @default(0)
+  total       Float
+  paymentMode String
+  amountPaid  Float
+  amountDue   Float      @default(0)
+  createdAt   DateTime   @default(now())
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  price     Float
+  total     Float
+}
+
+model Customer {
+  id            String        @id @default(cuid())
+  name          String
+  phone         String?       @unique
+  address       String?
+  balanceDue    Float         @default(0)
+  favoriteColor String?
+  occasion      String?       // e.g., "Wedding - 15 Dec 2025", "Festival - Diwali"
+  occasionDate  DateTime?
+  notes         String?       // e.g., "Loves red Banarasi, husband prefers cotton"
+  totalSpent    Float         @default(0)
+  lastPurchase  DateTime?
+  sales         Sale[]
+  ledger        LedgerEntry[]
+  createdAt     DateTime      @default(now())
+}
+
+model LedgerEntry {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type       String
+  amount     Float
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+model Supplier {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String?
+  products  Product[]
+  purchases Purchase[]
+}
+
+model Purchase {
+  id         String    @id @default(cuid())
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  billNo     String?
+  items      String
+  totalCost  Float
+  billImages String?
+  createdAt  DateTime  @default(now())
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  title     String
+  amount    Float
+  category  String?
+  note      String?
+  date      DateTime @default(now())
+}
+
+model User {
+  id       String @id @default(cuid())
+  name     String
+  username String @unique
+  password String
+  role     String @default("STAFF")
+}
